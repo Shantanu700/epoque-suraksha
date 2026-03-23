@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../network/api_client.dart';
-import '../network/dio_provider.dart';
+import '../../network/api_client.dart';
+import '../../network/dio_provider.dart';
 import 'package:dio/dio.dart';
 
 class AuthRepository {

@@ -1,8 +1,10 @@
-import 'package:epoque_suraksha/theme/theme.dart';
 import 'package:flutter/material.dart';
-import 'pages/dashboard_page.dart';
-import 'pages/profile_page.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../theme/theme.dart';
+import 'pages/qr_scanner_page.dart';
+import 'pages/profile_page.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,69 +16,146 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [DashboardPage(), ProfilePage()];
-
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      QrScannerPage(isActive: _currentIndex == 0),
+      ProfilePage(isActive: _currentIndex == 1),
+    ];
+
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: AppTheme.primaryGreen,
+        statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: AppTheme.cardBackground,
+        systemNavigationBarColor: AppTheme.bgDeep,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: IndexedStack(
-          key: ValueKey(_currentIndex),
-          index: _currentIndex,
-          children: _pages,
-        ),
+      backgroundColor: AppTheme.bgDeep,
+      body: IndexedStack(index: _currentIndex, children: pages),
+      bottomNavigationBar: _BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
       ),
+    );
+  }
+}
 
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(
-              color: Colors.blueGrey.withOpacity(0.8),
-              width: 0.5,
-            ),
-          ),
+// ── Custom bottom nav bar ──────────────────────────────────
+class _BottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomNavBar({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _NavItem(
+        icon: Icons.qr_code_scanner_outlined,
+        activeIcon: Icons.qr_code_scanner_rounded,
+        label: 'Scan QR',
+      ),
+      _NavItem(
+        icon: Icons.list_alt_outlined,
+        activeIcon: Icons.list_alt_rounded,
+        label: 'Reports',
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard,
+        border: const Border(
+          top: BorderSide(color: AppTheme.puzzleBorder, width: 1),
         ),
-        child: NavigationBar(
-          backgroundColor: AppTheme.cardBackground,
-          height: 70,
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: "Dashboard",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: "Profile",
-            ),
-          ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              final item = items[i];
+              final isSelected = i == currentIndex;
+
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Active pill background
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: isSelected ? 56 : 40,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppTheme.gold.withOpacity(0.13)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          border: isSelected
+                              ? Border.all(
+                                  color: AppTheme.gold.withOpacity(0.25),
+                                  width: 1,
+                                )
+                              : null,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            isSelected ? item.activeIcon : item.icon,
+                            size: 20,
+                            color: isSelected
+                                ? AppTheme.gold
+                                : AppTheme.ashGrey,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // Label
+                      Text(
+                        item.label,
+                        style: GoogleFonts.lora(
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                          color: isSelected ? AppTheme.gold : AppTheme.ashGrey,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }

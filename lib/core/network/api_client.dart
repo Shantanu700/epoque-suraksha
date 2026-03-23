@@ -19,6 +19,8 @@ class ApiClient {
     return path;
   }
 
+  String get baseUrl => dio.options.baseUrl;
+
   static Future<ApiClient> create() async {
     final dio = Dio(
       BaseOptions(

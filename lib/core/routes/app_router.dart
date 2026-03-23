@@ -9,7 +9,7 @@ import 'app_routes.dart';
 
 class AppRouter {
   static Map<String, WidgetBuilder> routes = {
-    AppRoutes.splash: (context) => const SplashScreen(),
+    AppRoutes.splash: (context) => SplashScreen(),
     AppRoutes.login: (context) => const LoginScreen(),
     AppRoutes.home: (context) => const MainScreen(),
   };
