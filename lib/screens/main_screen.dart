@@ -43,7 +43,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ── Custom bottom nav bar ──────────────────────────────────
 class _BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
