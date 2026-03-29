@@ -314,6 +314,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    Text(
+                      'Made with ❤️ by Team ERP',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.ashGrey.withOpacity(0.5),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

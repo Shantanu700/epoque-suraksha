@@ -46,6 +46,9 @@ class AppTheme {
   /// Success green.
   static const Color successGreen = Color(0xFF2ECC71);
 
+  /// Warning yellow.
+  static const Color warningYellow = Color(0xFFE8B84B);
+
   // ─── Shadows ──────────────────────────────────────────────────────────────
 
   static const Color goldShadow = Color(0x33CBA96E);

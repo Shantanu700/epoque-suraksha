@@ -196,7 +196,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
     final imagePath = data["profile_image"]?["url"];
     final api = ref.read(apiClientProvider).value!;
     final imageUrl = imagePath != null ? "${api.baseUrl}$imagePath" : "";
-    final isAllowed = data["allowed"] != "Not allowed";
+    final isAllowed = data["allowed"] == "Allowed";
 
     showModalBottomSheet(
       enableDrag: false,
@@ -339,7 +339,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
                   Icon(
                     isAllowed
                         ? Icons.check_circle_outline_rounded
-                        : Icons.cancel_outlined,
+                        : Icons.error_outline_rounded,
                     size: 14,
                     color: isAllowed
                         ? AppTheme.successGreen
@@ -347,7 +347,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    data["allowed"] ?? "",
+                    data["allowed"] ?? "Not Allowed",
                     style: GoogleFonts.lora(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
