@@ -1,4 +1,3 @@
-import 'package:epoque_suraksha/core/network/dio_provider.dart';
 import 'package:epoque_suraksha/core/services/qr_service.dart';
 import 'package:epoque_suraksha/theme/theme.dart';
 import 'package:flutter/material.dart';
@@ -192,10 +191,26 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
     );
   }
 
+  IconData _iconFor(String type) {
+    switch (type.toLowerCase()) {
+      case 'student':
+        return Icons.school_outlined;
+      case 'employee':
+      case 'faculty':
+      case 'staff':
+        return Icons.badge_outlined;
+      case 'guest':
+        return Icons.person_outline_rounded;
+      case 'participation':
+        return Icons.how_to_reg_outlined;
+      default:
+        return Icons.group_outlined;
+    }
+  }
+
   void _showProfileSheet(Map<String, dynamic> data) {
-    final imagePath = data["profile_image"]?["url"];
-    final api = ref.read(apiClientProvider).value!;
-    final imageUrl = imagePath != null ? "${api.baseUrl}$imagePath" : "";
+    final imagePath = data["profile_image_url"];
+    final imageUrl = imagePath != null ? "$imagePath" : "";
     final isAllowed = data["allowed"] == "Allowed";
 
     showModalBottomSheet(
@@ -288,30 +303,43 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
             ),
 
             const SizedBox(height: 14),
-            if (data["member_course_label"] != null)
-              _InfoChip(
-                icon: Icons.location_on_outlined,
-                label: data["member_college_label"],
-              ),
-            const SizedBox(height: 14),
 
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (data["member_course_label"] != null)
+                if (data["type"] != null)
                   _InfoChip(
-                    icon: Icons.school_outlined,
-                    label: data["member_course_label"],
+                    icon: _iconFor(data["type"]),
+                    label: data["type"],
+                    variant: _ChipVariant.gold,
                   ),
+                if (data["type"] != null && data["member_year"] != null)
+                  const SizedBox(width: 8),
                 if (data["member_year"] != null)
                   _InfoChip(
                     icon: Icons.calendar_today_outlined,
                     label: 'Year ${data["member_year"]}',
+                    variant: _ChipVariant.warning,
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            _InfoRow(
+              items: [
+                if (data["member_college_label"] != null)
+                  _InfoRowItem(
+                    icon: Icons.location_on_outlined,
+                    label: data["member_college_label"],
+                  ),
+                if (data["member_course_label"] != null)
+                  _InfoRowItem(
+                    icon: Icons.school_outlined,
+                    label: data["member_course_label"],
                   ),
                 if (data["gender_label"] != null)
-                  _InfoChip(
+                  _InfoRowItem(
                     icon: Icons.person_outline_rounded,
                     label: data["gender_label"],
                   ),
@@ -546,7 +574,6 @@ class _StyledSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Container(
             width: 36,
             height: 3,
@@ -563,36 +590,114 @@ class _StyledSheet extends StatelessWidget {
   }
 }
 
+enum _ChipVariant { gold, success, warning, error, neutral }
+
 class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _InfoChip({required this.icon, required this.label});
+  final _ChipVariant variant;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    this.variant = _ChipVariant.neutral,
+  });
+
+  Color _accentFor(_ChipVariant v) {
+    switch (v) {
+      case _ChipVariant.gold:
+        return AppTheme.gold;
+      case _ChipVariant.success:
+        return AppTheme.successGreen;
+      case _ChipVariant.warning:
+        return AppTheme.warningYellow;
+      case _ChipVariant.error:
+        return AppTheme.errorRed;
+      case _ChipVariant.neutral:
+        return AppTheme.ashGrey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final accent = _accentFor(variant);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.only(right: 14),
       decoration: BoxDecoration(
-        color: AppTheme.bgInput,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.puzzleBorder, width: 1),
+        color: accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: accent.withOpacity(0.25), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppTheme.gold),
-          const SizedBox(width: 5),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withOpacity(0.15),
+              border: Border.all(color: accent.withOpacity(0.3), width: 1),
+            ),
+            child: Icon(icon, size: 15, color: accent),
+          ),
+          const SizedBox(width: 8),
           Text(
             label,
             style: GoogleFonts.dmSans(
-              fontSize: 11,
+              fontSize: 12,
               color: AppTheme.snowWhite,
-              letterSpacing: 0.3,
-              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InfoRowItem {
+  final IconData icon;
+  final String label;
+  const _InfoRowItem({required this.icon, required this.label});
+}
+
+class _InfoRow extends StatelessWidget {
+  final List<_InfoRowItem> items;
+  const _InfoRow({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 20,
+      runSpacing: 10,
+      children: items
+          .map(
+            (item) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  item.icon,
+                  size: 16,
+                  color: AppTheme.gold.withOpacity(0.7),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  item.label,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    color: AppTheme.snowWhite.withOpacity(0.75),
+                    letterSpacing: 0.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          )
+          .toList(),
     );
   }
 }
