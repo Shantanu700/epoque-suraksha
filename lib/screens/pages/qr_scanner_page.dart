@@ -349,36 +349,38 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
             const SizedBox(height: 16),
 
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 color: isAllowed
-                    ? AppTheme.successGreen.withOpacity(0.1)
-                    : AppTheme.errorRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+                    ? AppTheme.successGreen.withOpacity(0.12)
+                    : AppTheme.errorRed.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isAllowed
-                      ? AppTheme.successGreen.withOpacity(0.35)
-                      : AppTheme.errorRed.withOpacity(0.35),
+                      ? AppTheme.successGreen.withOpacity(0.4)
+                      : AppTheme.errorRed.withOpacity(0.4),
+                  width: 1,
                 ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     isAllowed
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.error_outline_rounded,
-                    size: 14,
+                        ? Icons.check_circle_rounded
+                        : Icons.cancel_rounded,
+                    size: 22,
                     color: isAllowed
                         ? AppTheme.successGreen
                         : AppTheme.errorRed,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 10),
                   Text(
                     data["allowed"] ?? "Not Allowed",
                     style: GoogleFonts.lora(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                       color: isAllowed
                           ? AppTheme.successGreen
