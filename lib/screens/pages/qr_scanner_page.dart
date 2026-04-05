@@ -133,12 +133,10 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
 
   void _scanAgain() => setState(() => _isScanning = true);
 
-  void _showErrorSheet(String message) {
-    showModalBottomSheet(
-      enableDrag: false,
+  void _showErrorSheet(String message) async {
+    await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isDismissible: false,
       builder: (_) => _StyledSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -189,6 +187,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
         ),
       ),
     );
+    _scanAgain();
   }
 
   IconData _iconFor(String type) {
@@ -208,16 +207,16 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
     }
   }
 
-  void _showProfileSheet(Map<String, dynamic> data) {
+  bool isSheetOpen = false;
+
+  void _showProfileSheet(Map<String, dynamic> data) async {
     final imagePath = data["profile_image_url"];
     final imageUrl = imagePath != null ? "$imagePath" : "";
     final isAllowed = data["allowed"] == "Allowed";
 
-    showModalBottomSheet(
-      enableDrag: false,
+    await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isDismissible: false,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _StyledSheet(
@@ -411,6 +410,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
         ),
       ),
     );
+    _scanAgain();
   }
 
   @override
