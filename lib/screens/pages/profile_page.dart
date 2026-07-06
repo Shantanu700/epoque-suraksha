@@ -3,16 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/services/auth/auth_notifier.dart';
-import '../../core/services/gatepass_count_service.dart';
+import '../../core/services/induction_report_service.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../theme/theme.dart';
 
-final _gatePassCountProvider =
+final _inductionReportProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-      final service = ref.watch(gatePasscountServiceProvider);
-      final res = await service.getGatePasscount('');
-      final list = res['msg'] as List<dynamic>;
-      return list.cast<Map<String, dynamic>>();
+      final service = ref.watch(inductionReportServiceProvider);
+      return service.getInductionReport();
     });
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -32,7 +30,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (widget.isActive && !_hasFetched) {
       _hasFetched = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) ref.invalidate(_gatePassCountProvider);
+        if (mounted) ref.invalidate(_inductionReportProvider);
       });
     }
     if (!widget.isActive) {
@@ -41,9 +39,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _refresh() async {
-    ref.invalidate(_gatePassCountProvider);
+    ref.invalidate(_inductionReportProvider);
     // ignore: body_might_complete_normally_catch_error
-    await ref.read(_gatePassCountProvider.future).catchError((_) {});
+    await ref.read(_inductionReportProvider.future).catchError((_) {});
   }
 
   Future<void> _logout() async {
@@ -52,9 +50,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
+  int _asInt(dynamic v) => v is int ? v : int.tryParse('$v') ?? 0;
+
   @override
   Widget build(BuildContext context) {
-    final countAsync = ref.watch(_gatePassCountProvider);
+    final reportAsync = ref.watch(_inductionReportProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.bgDeep,
@@ -118,7 +118,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
           SafeArea(
             top: false,
-            child: countAsync.when(
+            child: reportAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(
                   color: AppTheme.gold,
@@ -164,60 +164,96 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ],
                 ),
               ),
-              data: (counts) => RefreshIndicator(
-                onRefresh: _refresh,
-                color: AppTheme.gold,
-                backgroundColor: AppTheme.navyCard,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 3,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: AppTheme.gold,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'GATE PASS COUNTS',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 10,
-                            letterSpacing: 2,
-                            color: AppTheme.ashGrey,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+              data: (branches) {
+                final totalStudents = branches.fold<int>(
+                  0,
+                  (s, b) => s + _asInt(b['total_students']),
+                );
+                final totalPresent = branches.fold<int>(
+                  0,
+                  (s, b) => s + _asInt(b['total_present']),
+                );
+                final totalAbsent = branches.fold<int>(
+                  0,
+                  (s, b) => s + _asInt(b['total_absent']),
+                );
 
-                    const SizedBox(height: 16),
-
-                    ...counts.map(
-                      (item) => _CountCard(
-                        type: item['type'] ?? '—',
-                        count: item['count'] ?? 0,
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  color: AppTheme.gold,
+                  backgroundColor: AppTheme.navyCard,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    children: [
+                      _SummaryCard(
+                        students: totalStudents,
+                        present: totalPresent,
+                        absent: totalAbsent,
                       ),
-                    ),
 
-                    if (counts.length > 1) ...[
-                      const SizedBox(height: 12),
-                      Container(height: 1, color: AppTheme.puzzleBorder),
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Container(
+                            width: 3,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: AppTheme.gold,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'BRANCH WISE',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              color: AppTheme.ashGrey,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${branches.length} branches',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                              color: AppTheme.ashGrey.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 16),
-                      _TotalRow(
-                        total: counts.fold<int>(
-                          0,
-                          (sum, item) => sum + (item['count'] as int? ?? 0),
+
+                      if (branches.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 40),
+                          child: Center(
+                            child: Text(
+                              'No data available',
+                              style: GoogleFonts.dmSans(
+                                color: AppTheme.ashGrey,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...branches.map(
+                          (b) => _BranchCard(
+                            name: (b['branch_name'] ?? '—').toString(),
+                            students: _asInt(b['total_students']),
+                            present: _asInt(b['total_present']),
+                            absent: _asInt(b['total_absent']),
+                          ),
                         ),
-                      ),
                     ],
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -226,33 +262,178 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 }
 
-class _CountCard extends StatelessWidget {
-  final String type;
-  final int count;
-  const _CountCard({required this.type, required this.count});
-
-  IconData _iconFor(String type) {
-    switch (type.toLowerCase()) {
-      case 'student':
-        return Icons.school_outlined;
-      case 'employee':
-      case 'faculty':
-      case 'staff':
-        return Icons.badge_outlined;
-      case 'guest':
-        return Icons.person_outline_rounded;
-      case 'participation':
-        return Icons.how_to_reg_outlined;
-      default:
-        return Icons.group_outlined;
-    }
-  }
+/// Aggregated overview across all branches.
+class _SummaryCard extends StatelessWidget {
+  final int students;
+  final int present;
+  final int absent;
+  const _SummaryCard({
+    required this.students,
+    required this.present,
+    required this.absent,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final pct = students == 0 ? 0.0 : present / students;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: AppTheme.accentCardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'OVERALL ATTENDANCE',
+            style: GoogleFonts.dmSans(
+              fontSize: 10,
+              letterSpacing: 2,
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$present',
+                style: GoogleFonts.lora(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.snowWhite,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '/ $students present',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    color: AppTheme.ashGrey,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '${(pct * 100).toStringAsFixed(1)}%',
+                  style: GoogleFonts.lora(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.gold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 8,
+              backgroundColor: AppTheme.bgInput,
+              valueColor: const AlwaysStoppedAnimation(AppTheme.gold),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _MiniStat(
+                  label: 'PRESENT',
+                  value: present,
+                  color: AppTheme.successGreen,
+                ),
+              ),
+              _statDivider(),
+              Expanded(
+                child: _MiniStat(
+                  label: 'ABSENT',
+                  value: absent,
+                  color: AppTheme.errorRed,
+                ),
+              ),
+              _statDivider(),
+              Expanded(
+                child: _MiniStat(
+                  label: 'STUDENTS',
+                  value: students,
+                  color: AppTheme.snowWhite,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statDivider() =>
+      Container(width: 1, height: 34, color: AppTheme.puzzleBorder);
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          '$value',
+          style: GoogleFonts.lora(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.dmSans(
+            fontSize: 9,
+            letterSpacing: 1.5,
+            color: AppTheme.ashGrey,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Per-branch attendance card.
+class _BranchCard extends StatelessWidget {
+  final String name;
+  final int students;
+  final int present;
+  final int absent;
+  const _BranchCard({
+    required this.name,
+    required this.students,
+    required this.present,
+    required this.absent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = students == 0 ? 0.0 : present / students;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: AppTheme.navyCard,
         borderRadius: BorderRadius.circular(14),
@@ -265,87 +446,113 @@ class _CountCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon container
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.gold.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.gold.withOpacity(0.25),
-                width: 1,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: GoogleFonts.lora(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.snowWhite,
+                    height: 1.3,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
-            ),
-            child: Icon(_iconFor(type), color: AppTheme.gold, size: 20),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgInput,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.gold.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  '${(pct * 100).toStringAsFixed(0)}%',
+                  style: GoogleFonts.lora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.gold,
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(height: 14),
 
-          // Type label
-          Expanded(
-            child: Text(
-              type,
-              style: GoogleFonts.lora(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.snowWhite,
-                letterSpacing: 0.3,
-              ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 6,
+              backgroundColor: AppTheme.bgInput,
+              valueColor: const AlwaysStoppedAnimation(AppTheme.successGreen),
             ),
           ),
 
-          // Count badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.bgInput,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.gold.withOpacity(0.3),
-                width: 1,
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              _tag(
+                label: 'Present',
+                value: present,
+                color: AppTheme.successGreen,
               ),
-            ),
-            child: Text(
-              count.toString(),
-              style: GoogleFonts.lora(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.gold,
-                letterSpacing: 0.5,
+              const SizedBox(width: 8),
+              _tag(label: 'Absent', value: absent, color: AppTheme.errorRed),
+              const Spacer(),
+              Text(
+                'of $students',
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  color: AppTheme.ashGrey,
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-class _TotalRow extends StatelessWidget {
-  final int total;
-  const _TotalRow({required this.total});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _tag({
+    required String label,
+    required int value,
+    required Color color,
+  }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
         Text(
-          'TOTAL',
+          '$label ',
           style: GoogleFonts.dmSans(
-            fontSize: 10,
-            letterSpacing: 2,
+            fontSize: 11,
             color: AppTheme.ashGrey,
-            fontWeight: FontWeight.w600,
           ),
         ),
         Text(
-          total.toString(),
-          style: GoogleFonts.lora(
-            fontSize: 22,
+          '$value',
+          style: GoogleFonts.dmSans(
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             color: AppTheme.snowWhite,
           ),
