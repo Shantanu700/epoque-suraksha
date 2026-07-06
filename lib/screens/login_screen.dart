@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       padding: const EdgeInsets.all(14),
                       child: Image.asset(
-                        'assets/images/epoquelogo25_col.png',
+                        'assets/images/kiet_logo.png',
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -307,7 +307,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 36),
 
                     Text(
-                      '© Epoque Suraksha 2026. All rights reserved.',
+                      '© KIET Suraksha 2026. All rights reserved.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.ashGrey.withOpacity(0.5),
                         letterSpacing: 0.5,

@@ -70,6 +70,7 @@ flutter:
   # the material Icons class.
   assets:
     - assets/images/epoquelogo25_col.png
+    - assets/images/kiet_logo.png
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

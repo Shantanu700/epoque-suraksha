@@ -31,7 +31,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !_hasFetched) {
       _hasFetched = true;
-      ref.invalidate(_gatePassCountProvider);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(_gatePassCountProvider);
+      });
     }
     if (!widget.isActive) {
       _hasFetched = false;

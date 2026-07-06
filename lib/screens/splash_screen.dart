@@ -180,7 +180,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     padding: const EdgeInsets.all(18),
                     child: Image.asset(
-                      'assets/images/epoquelogo25_col.png',
+                      'assets/images/kiet_logo.png',
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -188,7 +188,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   const SizedBox(height: 28),
 
                   const Text(
-                    'EPOQUE',
+                    'KIET',
                     style: TextStyle(
                       fontFamily: 'Georgia',
                       fontSize: 22,

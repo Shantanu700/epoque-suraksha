@@ -1,4 +1,5 @@
 import 'package:epoque_suraksha/core/services/qr_service.dart';
+import 'package:epoque_suraksha/core/services/update_guests_service.dart';
 import 'package:epoque_suraksha/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,7 +120,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
       final qrService = ref.read(qrServiceProvider);
       final response = await qrService.verifyQr(code.rawValue!);
       if (!mounted) return;
-      _showProfileSheet(response);
+      _showProfileSheet(response, code.rawValue!);
     } catch (e) {
       if (!mounted) return;
       _showErrorSheet(e.toString());
@@ -209,10 +210,16 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
 
   bool isSheetOpen = false;
 
-  void _showProfileSheet(Map<String, dynamic> data) async {
+  void _showProfileSheet(Map<String, dynamic> data, String qrId) async {
     final imagePath = data["profile_image_url"];
     final imageUrl = imagePath != null ? "$imagePath" : "";
     final isAllowed = data["allowed"] == "Allowed";
+
+    final int initialCount = isAllowed
+        ? 1
+        : ((data["count"] as num?)?.toInt() ?? 1);
+    int selectedCount = initialCount;
+    bool submitting = false;
 
     await showModalBottomSheet(
       context: context,
@@ -353,12 +360,12 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
               decoration: BoxDecoration(
                 color: isAllowed
                     ? AppTheme.successGreen.withOpacity(0.12)
-                    : AppTheme.errorRed.withOpacity(0.12),
+                    : AppTheme.warningYellow.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isAllowed
                       ? AppTheme.successGreen.withOpacity(0.4)
-                      : AppTheme.errorRed.withOpacity(0.4),
+                      : AppTheme.warningYellow.withOpacity(0.4),
                   width: 1,
                 ),
               ),
@@ -368,11 +375,11 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
                   Icon(
                     isAllowed
                         ? Icons.check_circle_rounded
-                        : Icons.cancel_rounded,
+                        : Icons.warning_rounded,
                     size: 22,
                     color: isAllowed
                         ? AppTheme.successGreen
-                        : AppTheme.errorRed,
+                        : AppTheme.warningYellow,
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -383,7 +390,7 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
                       letterSpacing: 0.5,
                       color: isAllowed
                           ? AppTheme.successGreen
-                          : AppTheme.errorRed,
+                          : AppTheme.warningYellow,
                     ),
                   ),
                 ],
@@ -395,15 +402,31 @@ class _QrScannerPageState extends ConsumerState<QrScannerPage> {
             Container(height: 1, color: AppTheme.puzzleBorder),
             const SizedBox(height: 20),
 
-            _StatTile(label: 'Count', value: data["count"].toString()),
+            _CountStepper(
+              initialCount: initialCount,
+              onChanged: (v) => selectedCount = v,
+            ),
 
             const SizedBox(height: 24),
 
             _GoldButton(
               label: 'Done',
-              onTap: () {
-                Navigator.pop(context);
-                _scanAgain();
+              onTap: () async {
+                if (submitting) return;
+                submitting = true;
+                try {
+                  await ref
+                      .read(updateGuestsServiceProvider)
+                      .updateGuests(qrId: qrId, count: selectedCount);
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  _scanAgain();
+                } catch (e) {
+                  submitting = false;
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  _showErrorSheet(e.toString());
+                }
               },
             ),
           ],
@@ -730,26 +753,59 @@ class _GoldButton extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  const _StatTile({required this.label, required this.value});
+class _CountStepper extends StatefulWidget {
+  final int initialCount;
+  final ValueChanged<int> onChanged;
+  const _CountStepper({required this.initialCount, required this.onChanged});
+
+  @override
+  State<_CountStepper> createState() => _CountStepperState();
+}
+
+class _CountStepperState extends State<_CountStepper> {
+  late int _count = widget.initialCount;
+
+  void _decrement() {
+    if (_count > 1) {
+      setState(() => _count--);
+      widget.onChanged(_count);
+    }
+  }
+
+  void _increment() {
+    setState(() => _count++);
+    widget.onChanged(_count);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          value,
-          style: GoogleFonts.lora(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.snowWhite,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _StepperButton(
+              icon: Icons.remove_rounded,
+              onTap: _count > 1 ? _decrement : null,
+            ),
+            SizedBox(
+              width: 56,
+              child: Text(
+                _count.toString(),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.lora(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.snowWhite,
+                ),
+              ),
+            ),
+            _StepperButton(icon: Icons.add_rounded, onTap: _increment),
+          ],
         ),
         const SizedBox(height: 3),
         Text(
-          label.toUpperCase(),
+          'COUNT',
           style: GoogleFonts.dmSans(
             color: AppTheme.ashGrey,
             fontSize: 9,
@@ -758,6 +814,41 @@ class _StatTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _StepperButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppTheme.gold.withOpacity(enabled ? 0.12 : 0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.gold.withOpacity(enabled ? 0.4 : 0.15),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: AppTheme.gold.withOpacity(enabled ? 1 : 0.3),
+          ),
+        ),
+      ),
     );
   }
 }
