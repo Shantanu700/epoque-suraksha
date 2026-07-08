@@ -61,6 +61,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
       appBar: AppBar(
         backgroundColor: AppTheme.bgDeep,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: false,
         title: Text(
@@ -178,80 +180,101 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   (s, b) => s + _asInt(b['total_absent']),
                 );
 
-                return RefreshIndicator(
-                  onRefresh: _refresh,
-                  color: AppTheme.gold,
-                  backgroundColor: AppTheme.navyCard,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                    children: [
-                      _SummaryCard(
-                        students: totalStudents,
-                        present: totalPresent,
-                        absent: totalAbsent,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Row(
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Sticky summary + section header ──────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Container(
-                            width: 3,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: AppTheme.gold,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+                          _SummaryCard(
+                            students: totalStudents,
+                            present: totalPresent,
+                            absent: totalAbsent,
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'BRANCH WISE',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 10,
-                              letterSpacing: 2,
-                              color: AppTheme.ashGrey,
-                              fontWeight: FontWeight.w600,
-                            ),
+
+                          const SizedBox(height: 24),
+
+                          Row(
+                            children: [
+                              Container(
+                                width: 3,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.gold,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'BRANCH WISE',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 10,
+                                  letterSpacing: 2,
+                                  color: AppTheme.ashGrey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${branches.length} branches',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                  color: AppTheme.ashGrey.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
                           ),
-                          const Spacer(),
-                          Text(
-                            '${branches.length} branches',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 10,
-                              letterSpacing: 0.5,
-                              color: AppTheme.ashGrey.withOpacity(0.6),
-                            ),
-                          ),
+
+                          const SizedBox(height: 16),
                         ],
                       ),
+                    ),
 
-                      const SizedBox(height: 16),
-
-                      if (branches.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 40),
-                          child: Center(
-                            child: Text(
-                              'No data available',
-                              style: GoogleFonts.dmSans(
-                                color: AppTheme.ashGrey,
-                                fontSize: 13,
+                    // ── Scrollable branch list ───────────────────────────────
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _refresh,
+                        color: AppTheme.gold,
+                        backgroundColor: AppTheme.navyCard,
+                        child: branches.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 40),
+                                    child: Center(
+                                      child: Text(
+                                        'No data available',
+                                        style: GoogleFonts.dmSans(
+                                          color: AppTheme.ashGrey,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                                itemCount: branches.length,
+                                itemBuilder: (context, i) {
+                                  final b = branches[i];
+                                  return _BranchCard(
+                                    name: (b['branch_name'] ?? '—').toString(),
+                                    students: _asInt(b['total_students']),
+                                    present: _asInt(b['total_present']),
+                                    absent: _asInt(b['total_absent']),
+                                  );
+                                },
                               ),
-                            ),
-                          ),
-                        )
-                      else
-                        ...branches.map(
-                          (b) => _BranchCard(
-                            name: (b['branch_name'] ?? '—').toString(),
-                            students: _asInt(b['total_students']),
-                            present: _asInt(b['total_present']),
-                            absent: _asInt(b['total_absent']),
-                          ),
-                        ),
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -279,7 +302,11 @@ class _SummaryCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppTheme.accentCardDecoration,
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.gold.withOpacity(0.4), width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
